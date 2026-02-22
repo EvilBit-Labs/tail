@@ -9,9 +9,7 @@ package tail
 
 import (
 	"fmt"
-	_ "fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -20,10 +18,6 @@ import (
 	"github.com/nxadm/tail/ratelimiter"
 	"github.com/nxadm/tail/watch"
 )
-
-func TestTailFile(t *testing.T) {
-	t.SkipNow()
-}
 
 func ExampleTailFile() {
 	// Keep tracking a file even when recreated.
@@ -96,7 +90,7 @@ func TestWaitsForFileToExistRelativePath(t *testing.T) {
 	go tailTest.VerifyTailOutput(tail, []string{"hello", "world"}, false)
 
 	<-time.After(100 * time.Millisecond)
-	if err := ioutil.WriteFile("test.txt", []byte("hello\nworld\n"), 0o600); err != nil {
+	if err := os.WriteFile("test.txt", []byte("hello\nworld\n"), 0o600); err != nil {
 		tailTest.Fatal(err)
 	}
 	tailTest.Cleanup(tail, true)
@@ -670,7 +664,7 @@ type TailTest struct {
 }
 
 func NewTailTest(name string, t *testing.T) (TailTest, func()) {
-	testdir, err := ioutil.TempDir("", "tail-test-"+name)
+	testdir, err := os.MkdirTemp("", "tail-test-"+name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -683,14 +677,14 @@ func NewTailTest(name string, t *testing.T) (TailTest, func()) {
 }
 
 func (t TailTest) CreateFile(name, contents string) {
-	err := ioutil.WriteFile(t.path+"/"+name, []byte(contents), 0o600)
+	err := os.WriteFile(t.path+"/"+name, []byte(contents), 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func (t TailTest) AppendToFile(name, contents string) {
-	err := ioutil.WriteFile(t.path+"/"+name, []byte(contents), 0o600|os.ModeAppend)
+	err := os.WriteFile(t.path+"/"+name, []byte(contents), 0o600|os.ModeAppend)
 	if err != nil {
 		t.Fatal(err)
 	}

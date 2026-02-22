@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -67,7 +66,7 @@ type logger interface {
 
 // Config is used to specify how a file must be tailed.
 type Config struct {
-	// File-specifc
+	// File-specific
 	Location  *SeekInfo // Tail from this location. If nil, start at the beginning of the file
 	ReOpen    bool      // Reopen recreated files (tail -F)
 	MustExist bool      // Fail early if the file does not exist
@@ -110,7 +109,7 @@ var (
 	// DefaultLogger logs to os.Stderr and it is used when Config.Logger == nil.
 	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
 	// DiscardingLogger can be used to disable logging output.
-	DiscardingLogger = log.New(ioutil.Discard, "", 0)
+	DiscardingLogger = log.New(io.Discard, "", 0)
 )
 
 // TailFile begins tailing the file. And returns a pointer to a Tail struct
@@ -120,7 +119,7 @@ var (
 // method on the returned *Tail.
 func TailFile(filename string, config Config) (*Tail, error) {
 	if config.ReOpen && !config.Follow {
-		util.Fatal("cannot set ReOpen without Follow.")
+		return nil, errors.New("cannot set ReOpen without Follow")
 	}
 
 	t := &Tail{
@@ -161,22 +160,21 @@ func TailFile(filename string, config Config) (*Tail, error) {
 // Beware that this value may not be completely accurate because one line from
 // the chan(tail.Lines) may have been read already.
 func (tail *Tail) Tell() (offset int64, err error) {
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+
 	if tail.file == nil {
-		return offset, err
+		return 0, nil
 	}
 	offset, err = tail.file.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return offset, err
 	}
 
-	tail.lk.Lock()
-	defer tail.lk.Unlock()
-	if tail.reader == nil {
-		return offset, err
+	if tail.reader != nil {
+		offset -= int64(tail.reader.Buffered())
 	}
-
-	offset -= int64(tail.reader.Buffered())
-	return offset, err
+	return offset, nil
 }
 
 // Stop stops the tailing activity.
@@ -186,7 +184,7 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached. The function
-// returns an error,.
+// returns an error.
 func (tail *Tail) StopAtEOF() error {
 	tail.Kill(errStopAtEOF)
 	return tail.Wait()
