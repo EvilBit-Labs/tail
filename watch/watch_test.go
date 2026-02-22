@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -102,8 +103,10 @@ func TestNewInotifyFileWatcher(t *testing.T) {
 	if w == nil {
 		t.Fatal("NewInotifyFileWatcher returned nil")
 	}
-	if w.Filename != "/tmp/test" {
-		t.Errorf("Filename = %q, want %q", w.Filename, "/tmp/test")
+	// NewInotifyFileWatcher calls filepath.Clean, so expect cleaned path.
+	want := filepath.Clean("/tmp/test")
+	if w.Filename != want {
+		t.Errorf("Filename = %q, want %q", w.Filename, want)
 	}
 }
 

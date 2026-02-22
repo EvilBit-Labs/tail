@@ -67,7 +67,7 @@ Linux, macOS, Windows, FreeBSD.
 
 ## Gotchas
 
-- `go.mod` specifies `go 1.13` — many modern linters are disabled automatically due to version constraint
+- `go.mod` specifies `go 1.18` — some modern linters may still be disabled due to version constraint
 - golangci-lint reports many existing issues in upstream code — config is correct, code needs incremental cleanup
 - Tests do real file I/O with timing-dependent operations (~10s runtime) — always use `-timeout 2m`
 - `vendor/` directory is checked in — run `go mod vendor` after dependency changes
