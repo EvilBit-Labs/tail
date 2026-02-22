@@ -1,12 +1,20 @@
 package ratelimiter
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
 
 // Compile-time check: Memory implements Storage.
 var _ Storage = (*Memory)(nil)
+
+func mustSetBucket(t *testing.T, m *Memory, key string, bucket LeakyBucket) {
+	t.Helper()
+	if err := m.SetBucketFor(key, bucket); err != nil {
+		t.Fatalf("SetBucketFor(%q) failed: %v", key, err)
+	}
+}
 
 func TestNewMemory(t *testing.T) {
 	m := NewMemory()
@@ -27,9 +35,7 @@ func TestMemorySetAndGetBucket(t *testing.T) {
 	m := NewMemory()
 	bucket := *NewLeakyBucket(100, time.Second)
 
-	if err := m.SetBucketFor("test-key", bucket); err != nil {
-		t.Fatalf("SetBucketFor failed: %v", err)
-	}
+	mustSetBucket(t, m, "test-key", bucket)
 
 	got, err := m.GetBucketFor("test-key")
 	if err != nil {
@@ -47,10 +53,10 @@ func TestMemoryOverwritesBucket(t *testing.T) {
 	m := NewMemory()
 
 	bucket1 := *NewLeakyBucket(10, time.Second)
-	m.SetBucketFor("key", bucket1)
+	mustSetBucket(t, m, "key", bucket1)
 
 	bucket2 := *NewLeakyBucket(20, time.Minute)
-	m.SetBucketFor("key", bucket2)
+	mustSetBucket(t, m, "key", bucket2)
 
 	got, err := m.GetBucketFor("key")
 	if err != nil {
@@ -73,14 +79,14 @@ func TestMemoryGarbageCollect(t *testing.T) {
 	drained.Now = func() time.Time { return now }
 	drained.Lastupdate = now.Add(-time.Hour)
 	drained.Fill = 0
-	m.SetBucketFor("drained", drained)
+	mustSetBucket(t, m, "drained", drained)
 
 	// Add a non-drained bucket (still has fill)
 	active := *NewLeakyBucket(10, time.Second)
 	active.Now = func() time.Time { return now }
 	active.Lastupdate = now
 	active.Fill = 5
-	m.SetBucketFor("active", active)
+	mustSetBucket(t, m, "active", active)
 
 	m.GarbageCollect()
 
@@ -99,7 +105,7 @@ func TestMemoryGarbageCollectRateLimited(t *testing.T) {
 	drained := *NewLeakyBucket(10, time.Second)
 	drained.Lastupdate = time.Now().Add(-time.Hour)
 	drained.Fill = 0
-	m.SetBucketFor("drained", drained)
+	mustSetBucket(t, m, "drained", drained)
 
 	// GC should be rate-limited and not run
 	m.GarbageCollect()
@@ -122,7 +128,7 @@ func TestMemorySetBucketTriggersGC(t *testing.T) {
 		b.Now = func() time.Time { return now }
 		b.Lastupdate = now.Add(-time.Hour)
 		b.Fill = 0
-		m.SetBucketFor(string(rune('a'+i)), b)
+		mustSetBucket(t, m, fmt.Sprintf("key-%d", i), b)
 	}
 
 	// This SetBucketFor should trigger GC because store > GC_SIZE
@@ -130,7 +136,7 @@ func TestMemorySetBucketTriggersGC(t *testing.T) {
 	active.Now = func() time.Time { return now }
 	active.Lastupdate = now
 	active.Fill = 5
-	m.SetBucketFor("active", active)
+	mustSetBucket(t, m, "active", active)
 
 	// The active bucket should survive
 	if _, err := m.GetBucketFor("active"); err != nil {
@@ -153,14 +159,24 @@ func TestGC_PERIODConstant(t *testing.T) {
 }
 
 func TestLeakyBucketSerFields(t *testing.T) {
+	now := time.Now()
 	ser := LeakyBucketSer{
 		Size:         10,
 		Fill:         5.0,
 		LeakInterval: time.Second,
-		Lastupdate:   time.Now(),
+		Lastupdate:   now,
 	}
 	if ser.Size != 10 {
 		t.Error("LeakyBucketSer.Size mismatch")
+	}
+	if ser.Fill != 5.0 {
+		t.Error("LeakyBucketSer.Fill mismatch")
+	}
+	if ser.LeakInterval != time.Second {
+		t.Error("LeakyBucketSer.LeakInterval mismatch")
+	}
+	if !ser.Lastupdate.Equal(now) {
+		t.Error("LeakyBucketSer.Lastupdate mismatch")
 	}
 }
 

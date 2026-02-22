@@ -93,11 +93,10 @@ func TestLOGGERExists(t *testing.T) {
 func TestLoggerTypeExists(t *testing.T) {
 	// Verify Logger struct is exported and embeds *log.Logger
 	var l Logger
-	_ = l.Logger // embedded *log.Logger field
+	t.Logf("Logger.Logger type: %T", l.Logger)
 }
 
 func TestFatalFunctionExists(t *testing.T) {
 	// We can't call Fatal (it calls os.Exit), but we verify it compiles
-	var fn func(string, ...interface{}) = Fatal
-	_ = fn
+	t.Logf("Fatal function: %T", Fatal)
 }

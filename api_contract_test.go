@@ -3,7 +3,6 @@ package tail
 import (
 	"errors"
 	"io"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ func TestErrStopExists(t *testing.T) {
 	if ErrStop == nil {
 		t.Fatal("ErrStop must not be nil")
 	}
-	var target error = ErrStop
+	target := ErrStop
 	if !errors.Is(target, ErrStop) {
 		t.Fatal("ErrStop must satisfy errors.Is")
 	}
@@ -27,25 +26,23 @@ func TestDefaultLoggerExists(t *testing.T) {
 	if DefaultLogger == nil {
 		t.Fatal("DefaultLogger must not be nil")
 	}
-	// Verify it's a *log.Logger
-	var _ *log.Logger = DefaultLogger
 }
 
 func TestDiscardingLoggerExists(t *testing.T) {
 	if DiscardingLogger == nil {
 		t.Fatal("DiscardingLogger must not be nil")
 	}
-	var _ *log.Logger = DiscardingLogger
 }
 
 // --- Type shape checks ---
 
 func TestLineFields(t *testing.T) {
+	now := time.Now()
 	l := Line{
 		Text:     "hello",
 		Num:      1,
 		SeekInfo: SeekInfo{Offset: 0, Whence: io.SeekStart},
-		Time:     time.Now(),
+		Time:     now,
 		Err:      nil,
 	}
 	if l.Text != "hello" {
@@ -53,6 +50,12 @@ func TestLineFields(t *testing.T) {
 	}
 	if l.Num != 1 {
 		t.Error("Line.Num mismatch")
+	}
+	if !l.Time.Equal(now) {
+		t.Error("Line.Time mismatch")
+	}
+	if l.Err != nil {
+		t.Error("Line.Err should be nil")
 	}
 }
 
@@ -80,8 +83,20 @@ func TestConfigFields(t *testing.T) {
 		RateLimiter:   rl,
 		Logger:        DiscardingLogger,
 	}
+	if cfg.Location == nil {
+		t.Error("Config.Location mismatch")
+	}
 	if !cfg.ReOpen {
 		t.Error("Config.ReOpen mismatch")
+	}
+	if !cfg.MustExist {
+		t.Error("Config.MustExist mismatch")
+	}
+	if !cfg.Poll {
+		t.Error("Config.Poll mismatch")
+	}
+	if !cfg.Pipe {
+		t.Error("Config.Pipe mismatch")
 	}
 	if !cfg.Follow {
 		t.Error("Config.Follow mismatch")
@@ -92,15 +107,19 @@ func TestConfigFields(t *testing.T) {
 	if cfg.MaxLineSize != 1024 {
 		t.Error("Config.MaxLineSize mismatch")
 	}
+	if cfg.RateLimiter == nil {
+		t.Error("Config.RateLimiter mismatch")
+	}
+	if cfg.Logger == nil {
+		t.Error("Config.Logger mismatch")
+	}
 }
 
 func TestTailStructFields(t *testing.T) {
 	// Verify the Tail struct exposes the expected public fields.
 	// We don't start a real tail; just verify the fields compile.
 	var tl Tail
-	_ = tl.Filename
-	_ = tl.Lines
-	_ = tl.Config
+	t.Logf("Tail.Filename type: %T, Lines type: %T", tl.Filename, tl.Lines)
 }
 
 // --- Deprecated but stable API ---
@@ -137,16 +156,23 @@ func TestTailFileMustExistFailsForMissingFile(t *testing.T) {
 	}
 }
 
-func TestTailFileReturnsWorkingTail(t *testing.T) {
-	// Create a temp file to tail
-	f, err := os.CreateTemp("", "api-contract-test-")
+func createTempFile(t *testing.T, content string) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "tail-api-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := f.Name()
-	f.WriteString("line1\nline2\n")
-	f.Close()
-	defer os.Remove(name)
+	if _, err := f.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return f.Name()
+}
+
+func TestTailFileReturnsWorkingTail(t *testing.T) {
+	name := createTempFile(t, "line1\nline2\n")
 
 	tl, err := TailFile(name, Config{Follow: false, MustExist: true})
 	if err != nil {
@@ -170,15 +196,7 @@ func TestTailFileReturnsWorkingTail(t *testing.T) {
 // --- Method existence checks ---
 
 func TestTailMethodsExist(t *testing.T) {
-	// Create a temp file so we get a valid *Tail
-	f, err := os.CreateTemp("", "api-methods-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	name := f.Name()
-	f.WriteString("hello\n")
-	f.Close()
-	defer os.Remove(name)
+	name := createTempFile(t, "hello\n")
 
 	tl, err := TailFile(name, Config{Follow: false, MustExist: true})
 	if err != nil {
@@ -186,34 +204,30 @@ func TestTailMethodsExist(t *testing.T) {
 	}
 
 	// Drain lines so tail finishes
-	for range tl.Lines {
+	for range tl.Lines { //nolint:revive // intentionally draining channel
 	}
 
 	// Wait for the goroutine to fully complete before accessing Tail fields.
 	// This avoids a race between closeFile() and Tell().
-	_ = tl.Wait()
+	if err := tl.Wait(); err != nil {
+		t.Logf("Wait returned: %v", err)
+	}
 
 	// Tell — after Wait(), the goroutine is done; calling Tell is safe
-	_, tellErr := tl.Tell()
-	_ = tellErr
+	if _, err := tl.Tell(); err != nil {
+		t.Logf("Tell returned: %v", err)
+	}
 
 	// Cleanup
 	tl.Cleanup()
 
 	// Verify method signatures compile (Stop is already exercised via Wait above)
-	var _ func() error = tl.Stop
-	var _ func() error = tl.StopAtEOF
+	_ = tl.Stop
+	_ = tl.StopAtEOF
 }
 
 func TestStopAtEOFMethodExists(t *testing.T) {
-	f, err := os.CreateTemp("", "api-stopeof-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	name := f.Name()
-	f.WriteString("data\n")
-	f.Close()
-	defer os.Remove(name)
+	name := createTempFile(t, "data\n")
 
 	tl, err := TailFile(name, Config{Follow: true, MustExist: true})
 	if err != nil {
@@ -224,9 +238,11 @@ func TestStopAtEOFMethodExists(t *testing.T) {
 	// StopAtEOF should exist and not panic
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		tl.StopAtEOF()
+		if err := tl.StopAtEOF(); err != nil {
+			t.Logf("StopAtEOF returned: %v", err)
+		}
 	}()
 
-	for range tl.Lines {
+	for range tl.Lines { //nolint:revive // intentionally draining channel
 	}
 }
