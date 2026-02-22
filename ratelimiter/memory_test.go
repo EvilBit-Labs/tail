@@ -137,3 +137,45 @@ func TestMemorySetBucketTriggersGC(t *testing.T) {
 		t.Error("expected active bucket to survive after GC trigger")
 	}
 }
+
+// --- API contract tests ---
+
+func TestGC_SIZEConstant(t *testing.T) {
+	if GC_SIZE != 100 {
+		t.Errorf("GC_SIZE = %d, want 100", GC_SIZE)
+	}
+}
+
+func TestGC_PERIODConstant(t *testing.T) {
+	if GC_PERIOD != 60*time.Second {
+		t.Errorf("GC_PERIOD = %v, want 60s", GC_PERIOD)
+	}
+}
+
+func TestLeakyBucketSerFields(t *testing.T) {
+	ser := LeakyBucketSer{
+		Size:         10,
+		Fill:         5.0,
+		LeakInterval: time.Second,
+		Lastupdate:   time.Now(),
+	}
+	if ser.Size != 10 {
+		t.Error("LeakyBucketSer.Size mismatch")
+	}
+}
+
+func TestNewLeakyBucketContract(t *testing.T) {
+	b := NewLeakyBucket(100, 2*time.Second)
+	if b.Size != 100 {
+		t.Errorf("Size = %d, want 100", b.Size)
+	}
+	if b.Fill != 0 {
+		t.Errorf("Fill = %f, want 0", b.Fill)
+	}
+	if b.LeakInterval != 2*time.Second {
+		t.Errorf("LeakInterval = %v, want 2s", b.LeakInterval)
+	}
+	if b.Now == nil {
+		t.Error("Now function must not be nil")
+	}
+}
