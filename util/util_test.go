@@ -81,3 +81,23 @@ func TestPartitionStringPanicsOnNegativeChunkSize(t *testing.T) {
 	}()
 	PartitionString("abc", -1)
 }
+
+// --- API contract tests ---
+
+func TestLOGGERExists(t *testing.T) {
+	if LOGGER == nil {
+		t.Fatal("LOGGER must not be nil")
+	}
+}
+
+func TestLoggerTypeExists(t *testing.T) {
+	// Verify Logger struct is exported and embeds *log.Logger
+	var l Logger
+	_ = l.Logger // embedded *log.Logger field
+}
+
+func TestFatalFunctionExists(t *testing.T) {
+	// We can't call Fatal (it calls os.Exit), but we verify it compiles
+	var fn func(string, ...interface{}) = Fatal
+	_ = fn
+}
