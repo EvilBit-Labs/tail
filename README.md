@@ -30,7 +30,9 @@ See [API documentation](https://pkg.go.dev/github.com/nxadm/tail#section-documen
 
 ## Installing
 
+```bash
     go get github.com/nxadm/tail/...
+```
 
 ## History
 
