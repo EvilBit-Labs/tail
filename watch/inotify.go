@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/nxadm/tail/util"
 	"gopkg.in/tomb.v1"
 )
 
@@ -114,8 +113,10 @@ func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 						changes.NotifyDeleted()
 						return
 					}
-					// XXX: report this error back to the user
-					util.Fatal("Failed to stat file %v: %v", fw.Filename, err)
+					// Treat unexpected stat errors as deletion to avoid crashing the process.
+					RemoveWatch(fw.Filename)
+					changes.NotifyDeleted()
+					return
 				}
 				fw.Size = fi.Size()
 

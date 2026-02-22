@@ -15,9 +15,13 @@ type Logger struct {
 	*log.Logger
 }
 
+// Deprecated: LOGGER is exported for historical reasons. Use the Logger field
+// in tail.Config instead.
 var LOGGER = &Logger{log.New(os.Stderr, "", log.LstdFlags)}
 
-// fatal is like panic except it displays only the current goroutine's stack.
+// Deprecated: Fatal terminates the process and should not be used in library code.
+// It remains exported for backward compatibility but will be removed in a future
+// major release.
 func Fatal(format string, v ...interface{}) {
 	// https://github.com/nxadm/log/blob/master/log.go#L45
 	LOGGER.Output(2, fmt.Sprintf("FATAL -- "+format, v...)+"\n"+string(debug.Stack()))
