@@ -1,10 +1,5 @@
-exclude = [
-  "venv/**",
-  "**/node_modules/**",
-  "**/*.txt",
-  "**/CHANGELOG.md",
-]
-validate = true
-number = true
-wrap = "no"
+exclude     = [ "venv/**", "**/node_modules/**", "**/*.txt", "**/CHANGELOG.md" ]
+validate    = true
+number      = true
+wrap        = "no"
 end_of_line = "lf"
