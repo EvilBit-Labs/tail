@@ -9,7 +9,7 @@ import "gopkg.in/tomb.v1"
 // FileWatcher monitors file-level events.
 type FileWatcher interface {
 	// BlockUntilExists blocks until the file comes into existence.
-	BlockUntilExists(*tomb.Tomb) error
+	BlockUntilExists(t *tomb.Tomb) error
 
 	// ChangeEvents reports on changes to a file, be it modification,
 	// deletion, renames or truncations. Returned FileChanges group of
@@ -17,5 +17,5 @@ type FileWatcher interface {
 	// or truncation event.
 	// In order to properly report truncations, ChangeEvents requires
 	// the caller to pass their current offset in the file.
-	ChangeEvents(*tomb.Tomb, int64) (*FileChanges, error)
+	ChangeEvents(t *tomb.Tomb, pos int64) (*FileChanges, error)
 }

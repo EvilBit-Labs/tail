@@ -29,7 +29,7 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 	if err != nil {
 		return err
 	}
-	defer RemoveWatchCreate(fw.Filename)
+	defer RemoveWatchCreate(fw.Filename) //nolint:errcheck // best-effort cleanup on defer
 
 	// Do a real check now as the file might have been created before
 	// calling `WatchFlags` above.
@@ -84,37 +84,33 @@ func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 			select {
 			case evt, ok = <-events:
 				if !ok {
-					RemoveWatch(fw.Filename)
+					_ = RemoveWatch(fw.Filename) //nolint:errcheck // best-effort cleanup
 					return
 				}
 			case <-t.Dying():
-				RemoveWatch(fw.Filename)
+				_ = RemoveWatch(fw.Filename) //nolint:errcheck // best-effort cleanup
 				return
 			}
 
 			switch {
-			case evt.Op&fsnotify.Remove == fsnotify.Remove:
-				fallthrough
-
-			case evt.Op&fsnotify.Rename == fsnotify.Rename:
-				RemoveWatch(fw.Filename)
+			case evt.Op&fsnotify.Remove == fsnotify.Remove,
+				evt.Op&fsnotify.Rename == fsnotify.Rename:
+				_ = RemoveWatch(fw.Filename) //nolint:errcheck // best-effort cleanup
 				changes.NotifyDeleted()
 				return
 
 			// With an open fd, unlink(fd) - inotify returns IN_ATTRIB (==fsnotify.Chmod)
-			case evt.Op&fsnotify.Chmod == fsnotify.Chmod:
-				fallthrough
-
-			case evt.Op&fsnotify.Write == fsnotify.Write:
+			case evt.Op&fsnotify.Chmod == fsnotify.Chmod,
+				evt.Op&fsnotify.Write == fsnotify.Write:
 				fi, err := os.Stat(fw.Filename)
 				if err != nil {
 					if os.IsNotExist(err) {
-						RemoveWatch(fw.Filename)
+						_ = RemoveWatch(fw.Filename) //nolint:errcheck // best-effort cleanup
 						changes.NotifyDeleted()
 						return
 					}
 					// Treat unexpected stat errors as deletion to avoid crashing the process.
-					RemoveWatch(fw.Filename)
+					_ = RemoveWatch(fw.Filename) //nolint:errcheck // best-effort cleanup
 					changes.NotifyDeleted()
 					return
 				}
@@ -125,7 +121,6 @@ func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 				} else {
 					changes.NotifyModified()
 				}
-				prevSize = fw.Size
 			}
 		}
 	}()

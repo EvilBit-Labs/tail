@@ -90,6 +90,15 @@ linters:
     presets:
       - common-false-positives
       - std-error-handling
+    rules:
+      # tail_test.go uses goroutines that call t.Fatalf via TailTest helpers.
+      # Refactoring to channel-based error reporting is tracked separately.
+      - path: tail_test\.go
+        linters: [govet]
+        text: testinggoroutine
+      - path: tail_test\.go
+        linters: [staticcheck]
+        text: "SA2002"
   disable:
     - gomodguard # Disabled: maybe someday, but not important right now
     - gocyclo # Disabled in favor of cyclop
@@ -126,6 +135,8 @@ linters:
         - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
+        - (*github.com/nxadm/tail.Tail).Stop
+        - (*github.com/nxadm/tail.Tail).StopAtEOF
     exhaustive:
       check:
         - switch

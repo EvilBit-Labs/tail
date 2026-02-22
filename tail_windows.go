@@ -15,6 +15,6 @@ import (
 //
 // OpenFile proxies a os.Open call for a file so it can be correctly tailed
 // on POSIX and non-POSIX OSes like MS Windows.
-func OpenFile(name string) (file *os.File, err error) {
+func OpenFile(name string) (*os.File, error) {
 	return winfile.OpenFile(name, os.O_RDONLY, 0)
 }

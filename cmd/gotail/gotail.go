@@ -13,7 +13,7 @@ import (
 	"github.com/nxadm/tail"
 )
 
-func args2config() (tail.Config, int64) {
+func args2config() (tail.Config, int64) { //nolint:gocritic // unnamedResult: names conflict with nonamedreturns linter
 	config := tail.Config{Follow: true}
 	n := int64(0)
 	maxlinesize := int(0)

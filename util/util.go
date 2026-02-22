@@ -15,8 +15,9 @@ type Logger struct {
 	*log.Logger
 }
 
-// Deprecated: LOGGER is exported for historical reasons. Use the Logger field
-// in tail.Config instead.
+// LOGGER is exported for historical reasons. Use the Logger field in tail.Config instead.
+//
+// Deprecated: will be removed in a future major release.
 var LOGGER = &Logger{log.New(os.Stderr, "", log.LstdFlags)}
 
 // Deprecated: Fatal terminates the process and should not be used in library code.
@@ -24,7 +25,11 @@ var LOGGER = &Logger{log.New(os.Stderr, "", log.LstdFlags)}
 // major release.
 func Fatal(format string, v ...interface{}) {
 	// https://github.com/nxadm/log/blob/master/log.go#L45
-	LOGGER.Output(2, fmt.Sprintf("FATAL -- "+format, v...)+"\n"+string(debug.Stack()))
+	//nolint:errcheck // about to exit
+	_ = LOGGER.Output(
+		2, //nolint:mnd // log call depth
+		fmt.Sprintf("FATAL -- "+format, v...)+"\n"+string(debug.Stack()),
+	)
 	os.Exit(1)
 }
 

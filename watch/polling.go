@@ -114,5 +114,5 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 }
 
 func init() {
-	POLL_DURATION = 250 * time.Millisecond
+	POLL_DURATION = 250 * time.Millisecond //nolint:mnd // sensible default poll interval
 }

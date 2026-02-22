@@ -26,7 +26,7 @@ func main() {
 		}
 	}()
 
-	time.Sleep(time.Second * 5) // Give time to the go routine to print stuff
+	time.Sleep(time.Second * 5) //nolint:mnd // Give time to the go routine to print stuff
 	fmt.Println("Closing the logfile " + logFile)
 	err = t.Stop()
 	if err != nil {
