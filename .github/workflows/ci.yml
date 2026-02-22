@@ -1,6 +1,16 @@
 name: ci
 on: [push, pull_request]
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9
+        with:
+          version: v2.9
   test-build:
     strategy:
       matrix:
@@ -23,7 +33,3 @@ jobs:
       - name: Build cmd
         run: go build
         working-directory: ./cmd/gotail
-
-      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9
-        with:
-          version: v2.9
