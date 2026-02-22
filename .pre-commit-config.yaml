@@ -1,0 +1,45 @@
+# .pre-commit-config.yaml
+
+repos:
+  # Standard Python code cleanup hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-illegal-windows-names
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-xml
+      - id: mixed-line-ending
+        args: [--fix=auto]
+      - id: check-docstring-first
+      - id: check-vcs-permalinks
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.11
+    hooks:
+      - id: actionlint
+        files: ".github/workflows/"
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-admon
+          - mdformat-config
+          - mdformat-footnote
+          - mdformat-simple-breaks
+          - mdformat-web
+          - mdformat-ruff
+          - mdformat-gfm-alerts
+          - mdformat-toc
+          - mdformat-front-matters
+        types: [markdown]
+        exclude: \.golden\.md$

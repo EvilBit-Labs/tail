@@ -1,0 +1,213 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+version: "2"
+
+run:
+  concurrency: 8
+  timeout: 30m
+  issues-exit-code: 1
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: false
+
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - canonicalheader
+    - containedctx
+    - copyloopvar
+    - cyclop
+    - decorder
+    - dupl
+    - durationcheck
+    - embeddedstructfieldcheck
+    - errchkjson
+    - errcheck
+    - errname
+    - errorlint
+    # - exhaustive - disabled: we'll come back to this after 1.0
+    # - exhaustruct - disabled: we'll come back to this after 1.0
+    - exptostd
+    - ginkgolinter
+    - fatcontext
+    - funcorder
+    # - funlen - Disabled: we'll come back to this after 1.0
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    # - gocognit - Disabled: we'll come back to this after 1.0
+    - goconst
+    - gocritic
+    # - gocyclo - Disabled in favor of cyclop (see disable section)
+    - godot
+    - gomoddirectives
+    - goprintffuncname
+    - gosec
+    - govet
+    - iface
+    - inamedparam
+    - ineffassign
+    - intrange
+    - loggercheck
+    - makezero
+    - mirror
+    - mnd
+    - musttag
+    - nakedret
+    # - nestif - Disabled: we'll come back to this after 1.0
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - perfsprint
+    # - prealloc # Disabled: this can be premature optimization
+    - predeclared
+    - reassign
+    - recvcheck
+    - revive
+    - sloglint
+    - spancheck
+    - staticcheck
+    #- tagliatelle # Disabled: currently this is more trouble than it's worth
+    - testableexamples
+    - thelper
+    - testifylint
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
+  disable:
+    - gomodguard # Disabled: maybe someday, but not important right now
+    - gocyclo # Disabled in favor of cyclop
+    - testpackage
+    - gochecknoglobals # Disabled: not useful for a library with package-level defaults
+  settings:
+    cyclop:
+      max-complexity: 50
+      package-average: 10.0
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - hugeParam
+        - rangeExprCopy
+        - rangeValCopy
+      settings:
+        captLocal:
+          paramsOnly: false
+        underef:
+          skipRecvDeref: false
+
+    embeddedstructfieldcheck:
+      forbid-mutex: true
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - io/ioutil.ReadFile
+        - io.Copy(*bytes.Buffer)
+        - io.Copy(os.Stdout)
+    exhaustive:
+      check:
+        - switch
+        - map
+    exhaustruct:
+      exclude:
+        - ^net/http.Client$
+        - ^net/http.Cookie$
+        - ^net/http.Request$
+        - ^net/http.Response$
+        - ^net/http.Server$
+        - ^net/http.Transport$
+        - ^net/url.URL$
+        - ^os/exec.Cmd$
+        - ^reflect.StructField$
+        - ^github.com/stretchr/testify/mock.Mock$
+        - ^golang.org/x/tools/go/analysis.Analyzer$
+        - ^gopkg.in/yaml.v3.Node$
+    funcorder:
+      struct-method: false
+    funlen:
+      lines: 60
+      statements: 40
+    gochecksumtype:
+      default-signifies-exhaustive: false
+    gocognit:
+      min-complexity: 30
+
+    gosec:
+      excludes:
+        - G301 # Directories may need broader permissions for cross-platform support
+        - G304 # File paths from user input are expected for a file-tailing library
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Disabled: this is a known issue with the govet tool
+        - shadow # Disabled temporarily to focus on other issues first
+    inamedparam:
+      skip-single-param: true
+
+    mnd:
+      ignored-functions:
+        - os.Chmod
+        - os.Mkdir.*
+        - os.OpenFile
+        - os.WriteFile
+
+    nakedret:
+      max-func-lines: 1
+    nolintlint:
+      allow-no-explanation: [ funlen, gocognit ]
+      require-explanation: true
+      require-specific: true
+    sloglint:
+      no-global: all
+      context: scope
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -QF1008
+    usetesting:
+      os-temp-dir: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  uniq-by-line: true
+  fix: true
+formatters:
+  enable:
+    - golines
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofumpt:
+      module-path: "github.com/nxadm/tail"
+      extra-rules: true
+    golines:
+      max-len: 120
+  exclusions:
+    generated: lax
