@@ -41,7 +41,7 @@ func (b *LeakyBucket) updateFill() {
 func (b *LeakyBucket) Pour(amount uint16) bool {
 	b.updateFill()
 
-	var newfill float64 = b.Fill + float64(amount)
+	newfill := b.Fill + float64(amount)
 
 	if newfill > float64(b.Size) {
 		return false
@@ -52,12 +52,12 @@ func (b *LeakyBucket) Pour(amount uint16) bool {
 	return true
 }
 
-// The time at which this bucket will be completely drained
+// The time at which this bucket will be completely drained.
 func (b *LeakyBucket) DrainedAt() time.Time {
 	return b.Lastupdate.Add(time.Duration(b.Fill * float64(b.LeakInterval)))
 }
 
-// The duration until this bucket is completely drained
+// The duration until this bucket is completely drained.
 func (b *LeakyBucket) TimeToDrain() time.Duration {
 	return b.DrainedAt().Sub(b.Now())
 }

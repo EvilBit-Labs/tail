@@ -7,8 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
-    "io"
+	"io"
 	"os"
+
 	"github.com/nxadm/tail"
 )
 

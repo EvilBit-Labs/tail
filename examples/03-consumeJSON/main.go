@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
-	
+
 	"github.com/nxadm/tail"
 )
 

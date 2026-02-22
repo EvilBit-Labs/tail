@@ -2,11 +2,11 @@
 // Copyright (c) 2015 HPE Software Inc. All rights reserved.
 // Copyright (c) 2013 ActiveState Software Inc. All rights reserved.
 
-//nxadm/tail provides a Go library that emulates the features of the BSD `tail`
-//program. The library comes with full support for truncation/move detection as
-//it is designed to work with log rotation tools. The library works on all
-//operating systems supported by Go, including POSIX systems like Linux and
-//*BSD, and MS Windows. Go 1.9 is the oldest compiler release supported.
+// nxadm/tail provides a Go library that emulates the features of the BSD `tail`
+// program. The library comes with full support for truncation/move detection as
+// it is designed to work with log rotation tools. The library works on all
+// operating systems supported by Go, including POSIX systems like Linux and
+// *BSD, and MS Windows. Go 1.9 is the oldest compiler release supported.
 package tail
 
 import (
@@ -27,10 +27,8 @@ import (
 	"gopkg.in/tomb.v1"
 )
 
-var (
-	// ErrStop is returned when the tail of a file has been marked to be stopped.
-	ErrStop = errors.New("tail should now stop")
-)
+// ErrStop is returned when the tail of a file has been marked to be stopped.
+var ErrStop = errors.New("tail should now stop")
 
 type Line struct {
 	Text     string    // The contents of the file
@@ -109,9 +107,9 @@ type Tail struct {
 }
 
 var (
-	// DefaultLogger logs to os.Stderr and it is used when Config.Logger == nil
+	// DefaultLogger logs to os.Stderr and it is used when Config.Logger == nil.
 	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
-	// DiscardingLogger can be used to disable logging output
+	// DiscardingLogger can be used to disable logging output.
 	DiscardingLogger = log.New(ioutil.Discard, "", 0)
 )
 
@@ -164,21 +162,21 @@ func TailFile(filename string, config Config) (*Tail, error) {
 // the chan(tail.Lines) may have been read already.
 func (tail *Tail) Tell() (offset int64, err error) {
 	if tail.file == nil {
-		return
+		return offset, err
 	}
 	offset, err = tail.file.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return
+		return offset, err
 	}
 
 	tail.lk.Lock()
 	defer tail.lk.Unlock()
 	if tail.reader == nil {
-		return
+		return offset, err
 	}
 
 	offset -= int64(tail.reader.Buffered())
-	return
+	return offset, err
 }
 
 // Stop stops the tailing activity.
@@ -188,7 +186,7 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached. The function
-// returns an error,
+// returns an error,.
 func (tail *Tail) StopAtEOF() error {
 	tail.Kill(errStopAtEOF)
 	return tail.Wait()
@@ -307,7 +305,8 @@ func (tail *Tail) tailFileSync() {
 		line, err := tail.readLine()
 
 		// Process `line` even if err is EOF.
-		if err == nil {
+		switch err {
+		case nil:
 			cooloff := !tail.sendLine(line)
 			if cooloff {
 				// Wait a second before seeking till the end of
@@ -325,7 +324,7 @@ func (tail *Tail) tailFileSync() {
 					return
 				}
 			}
-		} else if err == io.EOF {
+		case io.EOF:
 			if !tail.Follow {
 				if line != "" {
 					tail.sendLine(line)
@@ -351,7 +350,7 @@ func (tail *Tail) tailFileSync() {
 				}
 				return
 			}
-		} else {
+		default:
 			// non-EOF error
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
 			return

@@ -5,13 +5,12 @@
 package watch
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/nxadm/tail/util"
-
-    "github.com/fsnotify/fsnotify"
 	"gopkg.in/tomb.v1"
 )
 
@@ -46,7 +45,7 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 		select {
 		case evt, ok := <-events:
 			if !ok {
-				return fmt.Errorf("inotify watcher has been closed")
+				return errors.New("inotify watcher has been closed")
 			}
 			evtName, err := filepath.Abs(evt.Name)
 			if err != nil {
@@ -63,7 +62,6 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return tomb.ErrDying
 		}
 	}
-	panic("unreachable")
 }
 
 func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChanges, error) {
@@ -76,7 +74,6 @@ func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 	fw.Size = pos
 
 	go func() {
-
 		events := Events(fw.Filename)
 
 		for {
@@ -105,7 +102,7 @@ func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 				changes.NotifyDeleted()
 				return
 
-			//With an open fd, unlink(fd) - inotify returns IN_ATTRIB (==fsnotify.Chmod)
+			// With an open fd, unlink(fd) - inotify returns IN_ATTRIB (==fsnotify.Chmod)
 			case evt.Op&fsnotify.Chmod == fsnotify.Chmod:
 				fallthrough
 

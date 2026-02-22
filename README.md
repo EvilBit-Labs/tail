@@ -1,6 +1,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/nxadm/tail.svg)](https://pkg.go.dev/github.com/nxadm/tail#section-documentation)
 ![ci](https://github.com/nxadm/tail/workflows/ci/badge.svg)
 [![FreeBSD](https://api.cirrus-ci.com/github/nxadm/tail.svg)](https://cirrus-ci.com/github/nxadm/tail)
+
 # tail functionality in Go
 
 nxadm/tail provides a Go library that emulates the features of the BSD `tail`
@@ -14,7 +15,7 @@ A simple example:
 ```Go
 // Create a tail
 t, err := tail.TailFile(
-	"/var/log/nginx.log", tail.Config{Follow: true, ReOpen: true})
+ "/var/log/nginx.log", tail.Config{Follow: true, ReOpen: true})
 if err != nil {
     panic(err)
 }
@@ -42,4 +43,5 @@ nxadm/tail continues the development by keeping up to date with the Go toolchain
 and fixing bugs.
 
 ## Examples
+
 Examples, e.g. used to debug an issue, are kept in the [examples directory](/examples).

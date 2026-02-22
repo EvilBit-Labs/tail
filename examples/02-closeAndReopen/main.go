@@ -35,7 +35,7 @@ func main() {
 	fmt.Println("Closed the logfile " + logFile)
 	// If you plan to reread the same file, do not call Cleanup() as inotify/Linux will get confused.
 	// As the documentation states: "This function is meant to be invoked from a process's exit handler".
-	//t.Cleanup()
+	// t.Cleanup()
 
 	// Reopen the file and print it
 	t, err = tail.TailFile(logFile, tail.Config{Follow: true})
