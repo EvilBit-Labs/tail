@@ -1,6 +1,9 @@
 package watch
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // Compile-time interface compliance checks.
 var (
@@ -83,4 +86,89 @@ func TestNotifyDeleted(t *testing.T) {
 	default:
 		t.Fatal("expected value on Deleted channel")
 	}
+}
+
+// --- API contract tests ---
+
+func TestPOLL_DURATIONExists(t *testing.T) {
+	// POLL_DURATION must be an exported variable of type time.Duration
+	var d time.Duration = POLL_DURATION
+	if d <= 0 {
+		t.Log("POLL_DURATION is zero or negative (may be overridden in TestMain)")
+	}
+}
+
+func TestNewInotifyFileWatcher(t *testing.T) {
+	w := NewInotifyFileWatcher("/tmp/test")
+	if w == nil {
+		t.Fatal("NewInotifyFileWatcher returned nil")
+	}
+	if w.Filename != "/tmp/test" {
+		t.Errorf("Filename = %q, want %q", w.Filename, "/tmp/test")
+	}
+}
+
+func TestNewPollingFileWatcher(t *testing.T) {
+	w := NewPollingFileWatcher("/tmp/test")
+	if w == nil {
+		t.Fatal("NewPollingFileWatcher returned nil")
+	}
+	if w.Filename != "/tmp/test" {
+		t.Errorf("Filename = %q, want %q", w.Filename, "/tmp/test")
+	}
+}
+
+func TestInotifyFileWatcherFields(t *testing.T) {
+	w := InotifyFileWatcher{
+		Filename: "test.log",
+		Size:     42,
+	}
+	if w.Filename != "test.log" {
+		t.Error("Filename mismatch")
+	}
+	if w.Size != 42 {
+		t.Error("Size mismatch")
+	}
+}
+
+func TestPollingFileWatcherFields(t *testing.T) {
+	w := PollingFileWatcher{
+		Filename: "test.log",
+		Size:     42,
+	}
+	if w.Filename != "test.log" {
+		t.Error("Filename mismatch")
+	}
+	if w.Size != 42 {
+		t.Error("Size mismatch")
+	}
+}
+
+func TestFileChangesFields(t *testing.T) {
+	fc := FileChanges{
+		Modified:  make(chan bool, 1),
+		Truncated: make(chan bool, 1),
+		Deleted:   make(chan bool, 1),
+	}
+	if fc.Modified == nil || fc.Truncated == nil || fc.Deleted == nil {
+		t.Fatal("FileChanges channels must not be nil")
+	}
+}
+
+func TestWatchFunctionExists(t *testing.T) {
+	// Just verify the function signature compiles.
+	// We don't call Watch() as it requires inotify setup.
+	var fn func(string) error = Watch
+	_ = fn
+}
+
+func TestCleanupFunctionExists(t *testing.T) {
+	var fn func(string) error = Cleanup
+	_ = fn
+}
+
+func TestEventsFunctionExists(t *testing.T) {
+	// Verify the exported Events function signature.
+	// Cannot call it without a watch setup.
+	_ = Events
 }
