@@ -189,16 +189,20 @@ func TestTailMethodsExist(t *testing.T) {
 	for range tl.Lines {
 	}
 
-	// Tell
-	_, tellErr := tl.Tell()
-	// Tell may return error after Lines closed, that's OK — we just check the method exists
-	_ = tellErr
+	// Wait for the goroutine to fully complete before accessing Tail fields.
+	// This avoids a race between closeFile() and Tell().
+	_ = tl.Wait()
 
-	// Stop (already stopped via Follow=false, but method should exist)
-	_ = tl.Stop()
+	// Tell — after Wait(), the goroutine is done; calling Tell is safe
+	_, tellErr := tl.Tell()
+	_ = tellErr
 
 	// Cleanup
 	tl.Cleanup()
+
+	// Verify method signatures compile (Stop is already exercised via Wait above)
+	var _ func() error = tl.Stop
+	var _ func() error = tl.StopAtEOF
 }
 
 func TestStopAtEOFMethodExists(t *testing.T) {
