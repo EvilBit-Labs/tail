@@ -111,6 +111,9 @@ linters:
       - path: tail_test\.go
         linters: [gocritic]
         text: "unnamedResult"
+      # Upstream naming: Fatal wraps log.Output with format string (renaming is API-breaking).
+      - path: util/util\.go
+        linters: [goprintffuncname]
   disable:
     - gomodguard # Disabled: maybe someday, but not important right now
     - gocyclo # Disabled in favor of cyclop
@@ -209,7 +212,9 @@ linters:
       checks:
         - all
         - -ST1000
+        - -ST1003  # ALL_CAPS naming in upstream code (GC_SIZE, GC_PERIOD, POLL_DURATION)
         - -ST1016
+        - -ST1020  # comment form on exported symbols — tracked for incremental cleanup
         - -QF1008
     usetesting:
       os-temp-dir: true
