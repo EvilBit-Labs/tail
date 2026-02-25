@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/nxadm/tail/util"
 	"gopkg.in/tomb.v1"
 )
 
@@ -76,8 +75,9 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 					return
 				}
 
-				// XXX: report this error back to the user
-				util.Fatal("Failed to stat file %v: %v", fw.Filename, err)
+				// Treat unexpected stat errors as deletion to avoid crashing the process.
+				changes.NotifyDeleted()
+				return
 			}
 
 			// File got moved/renamed?
@@ -114,5 +114,5 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 }
 
 func init() {
-	POLL_DURATION = 250 * time.Millisecond
+	POLL_DURATION = 250 * time.Millisecond //nolint:mnd // sensible default poll interval
 }

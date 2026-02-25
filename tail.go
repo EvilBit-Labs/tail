@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -67,7 +66,7 @@ type logger interface {
 
 // Config is used to specify how a file must be tailed.
 type Config struct {
-	// File-specifc
+	// File-specific
 	Location  *SeekInfo // Tail from this location. If nil, start at the beginning of the file
 	ReOpen    bool      // Reopen recreated files (tail -F)
 	MustExist bool      // Fail early if the file does not exist
@@ -88,9 +87,11 @@ type Config struct {
 }
 
 type Tail struct {
+	Config    // Tail.Configuration
+	tomb.Tomb // provides: Done, Kill, Dying
+
 	Filename string     // The filename
 	Lines    chan *Line // A consumable channel of *Line
-	Config              // Tail.Configuration
 
 	file    *os.File
 	reader  *bufio.Reader
@@ -101,8 +102,6 @@ type Tail struct {
 	watcher watch.FileWatcher
 	changes *watch.FileChanges
 
-	tomb.Tomb // provides: Done, Kill, Dying
-
 	lk sync.Mutex
 }
 
@@ -110,7 +109,7 @@ var (
 	// DefaultLogger logs to os.Stderr and it is used when Config.Logger == nil.
 	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
 	// DiscardingLogger can be used to disable logging output.
-	DiscardingLogger = log.New(ioutil.Discard, "", 0)
+	DiscardingLogger = log.New(io.Discard, "", 0)
 )
 
 // TailFile begins tailing the file. And returns a pointer to a Tail struct
@@ -120,7 +119,7 @@ var (
 // method on the returned *Tail.
 func TailFile(filename string, config Config) (*Tail, error) {
 	if config.ReOpen && !config.Follow {
-		util.Fatal("cannot set ReOpen without Follow.")
+		return nil, errors.New("cannot set ReOpen without Follow")
 	}
 
 	t := &Tail{
@@ -160,23 +159,22 @@ func TailFile(filename string, config Config) (*Tail, error) {
 // Tell returns the file's current position, like stdio's ftell() and an error.
 // Beware that this value may not be completely accurate because one line from
 // the chan(tail.Lines) may have been read already.
-func (tail *Tail) Tell() (offset int64, err error) {
+func (tail *Tail) Tell() (int64, error) {
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+
 	if tail.file == nil {
-		return offset, err
+		return 0, nil
 	}
-	offset, err = tail.file.Seek(0, io.SeekCurrent)
+	offset, err := tail.file.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return offset, err
 	}
 
-	tail.lk.Lock()
-	defer tail.lk.Unlock()
-	if tail.reader == nil {
-		return offset, err
+	if tail.reader != nil {
+		offset -= int64(tail.reader.Buffered())
 	}
-
-	offset -= int64(tail.reader.Buffered())
-	return offset, err
+	return offset, nil
 }
 
 // Stop stops the tailing activity.
@@ -186,7 +184,7 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached. The function
-// returns an error,.
+// returns an error.
 func (tail *Tail) StopAtEOF() error {
 	tail.Kill(errStopAtEOF)
 	return tail.Wait()
@@ -201,7 +199,7 @@ func (tail *Tail) close() {
 
 func (tail *Tail) closeFile() {
 	if tail.file != nil {
-		tail.file.Close()
+		_ = tail.file.Close()
 		tail.file = nil
 	}
 }
@@ -222,11 +220,11 @@ func (tail *Tail) reopen() error {
 					if err == tomb.ErrDying {
 						return err
 					}
-					return fmt.Errorf("Failed to detect creation of %s: %s", tail.Filename, err)
+					return fmt.Errorf("failed to detect creation of %s: %s", tail.Filename, err)
 				}
 				continue
 			}
-			return fmt.Errorf("Unable to open file %s: %s", tail.Filename, err)
+			return fmt.Errorf("unable to open file %s: %s", tail.Filename, err)
 		}
 		break
 	}
@@ -257,12 +255,12 @@ func (tail *Tail) readLine() (string, error) {
 		line = tail.lineBuf.String()
 		tail.lineBuf.Reset()
 		return line, nil
-	} else {
-		if tail.Config.Follow {
-			line = ""
-		}
-		return line, io.EOF
 	}
+
+	if tail.Config.Follow {
+		line = ""
+	}
+	return line, io.EOF
 }
 
 func (tail *Tail) tailFileSync() {
@@ -284,7 +282,7 @@ func (tail *Tail) tailFileSync() {
 	if tail.Location != nil {
 		_, err := tail.file.Seek(tail.Location.Offset, tail.Location.Whence)
 		if err != nil {
-			tail.Killf("Seek error on %s: %s", tail.Filename, err)
+			tail.Killf("seek error on %s: %s", tail.Filename, err) //nolint:errcheck,gosec // followed by return
 			return
 		}
 	}
@@ -312,8 +310,8 @@ func (tail *Tail) tailFileSync() {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
 				msg := ("Too much log activity; waiting a second before resuming tailing")
-				offset, _ := tail.Tell()
-				tail.Lines <- &Line{msg, tail.lineNum, SeekInfo{Offset: offset}, time.Now(), errors.New(msg)}
+				offset, _ := tail.Tell()                                                                      //nolint:errcheck // best-effort offset
+				tail.Lines <- &Line{msg, tail.lineNum, SeekInfo{Offset: offset}, time.Now(), errors.New(msg)} //nolint:staticcheck // ST1005: msg is user-facing text
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
@@ -352,7 +350,7 @@ func (tail *Tail) tailFileSync() {
 			}
 		default:
 			// non-EOF error
-			tail.Killf("Error reading %s: %s", tail.Filename, err)
+			tail.Killf("error reading %s: %s", tail.Filename, err) //nolint:errcheck,gosec // followed by return
 			return
 		}
 
@@ -416,8 +414,8 @@ func (tail *Tail) waitForChanges() error {
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
 	if tail.MaxLineSize > 0 {
-		// add 2 to account for newline characters
-		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
+		// add 2 to account for \r\n line endings
+		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2) //nolint:mnd // +2 for \r\n
 	} else {
 		tail.reader = bufio.NewReader(tail.file)
 	}
@@ -431,7 +429,7 @@ func (tail *Tail) seekEnd() error {
 func (tail *Tail) seekTo(pos SeekInfo) error {
 	_, err := tail.file.Seek(pos.Offset, pos.Whence)
 	if err != nil {
-		return fmt.Errorf("Seek error on %s: %s", tail.Filename, err)
+		return fmt.Errorf("seek error on %s: %s", tail.Filename, err)
 	}
 	// Reset the read buffer whenever the file is re-seek'ed
 	tail.reader.Reset(tail.file)
@@ -451,7 +449,7 @@ func (tail *Tail) sendLine(line string) bool {
 
 	for _, line := range lines {
 		tail.lineNum++
-		offset, _ := tail.Tell()
+		offset, _ := tail.Tell() //nolint:errcheck // best-effort offset for line metadata
 		select {
 		case tail.Lines <- &Line{line, tail.lineNum, SeekInfo{Offset: offset}, now, nil}:
 		case <-tail.Dying():
@@ -460,7 +458,9 @@ func (tail *Tail) sendLine(line string) bool {
 	}
 
 	if tail.Config.RateLimiter != nil {
-		ok := tail.Config.RateLimiter.Pour(uint16(len(lines)))
+		ok := tail.Config.RateLimiter.Pour(
+			uint16(len(lines)), //nolint:gosec // G115: len(lines) bounded by line partitioning
+		)
 		if !ok {
 			tail.Logger.Printf("Leaky bucket full (%v); entering 1s cooloff period.",
 				tail.Filename)
@@ -476,5 +476,5 @@ func (tail *Tail) sendLine(line string) bool {
 // automatically remove inotify watches after the process exits.
 // If you plan to re-read a file, don't call Cleanup in between.
 func (tail *Tail) Cleanup() {
-	watch.Cleanup(tail.Filename)
+	_ = watch.Cleanup(tail.Filename) //nolint:errcheck // best-effort cleanup
 }

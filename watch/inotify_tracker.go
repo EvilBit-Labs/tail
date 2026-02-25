@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/nxadm/tail/util"
 )
 
 type InotifyTracker struct {
@@ -32,8 +31,8 @@ type watchInfo struct {
 	fname string
 }
 
-func (this *watchInfo) isCreate() bool {
-	return this.op == fsnotify.Create
+func (w *watchInfo) isCreate() bool {
+	return w.op == fsnotify.Create
 }
 
 var (
@@ -217,7 +216,7 @@ func (shared *InotifyTracker) sendEvent(event fsnotify.Event) {
 func (shared *InotifyTracker) run() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		util.Fatal("failed to create Watcher")
+		panic("tail: failed to create fsnotify watcher: " + err.Error())
 	}
 	shared.watcher = watcher
 

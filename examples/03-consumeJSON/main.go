@@ -8,7 +8,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -20,7 +19,7 @@ type jsonStruct struct {
 }
 
 func main() {
-	file, err := ioutil.TempFile(os.TempDir(), "")
+	file, err := os.CreateTemp(os.TempDir(), "")
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +48,7 @@ func main() {
 func createJSON(file *os.File) {
 	var counter int
 	for {
-		file.WriteString("{ \"counter\": \"" + strconv.Itoa(counter) + "\"}\n")
+		_, _ = file.WriteString("{ \"counter\": \"" + strconv.Itoa(counter) + "\"}\n") //nolint:errcheck // example code
 		counter++
 	}
 }

@@ -25,7 +25,7 @@ func NewMemory() *Memory {
 func (m *Memory) GetBucketFor(key string) (*LeakyBucket, error) {
 	bucket, ok := m.store[key]
 	if !ok {
-		return nil, errors.New("miss")
+		return nil, errors.New("no bucket found for key: " + key)
 	}
 
 	return &bucket, nil

@@ -13,3 +13,6 @@ coverage.html
 
 # Editor settings
 .vscode/
+
+# Plans and documentation
+docs/plans/

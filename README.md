@@ -8,20 +8,23 @@ nxadm/tail provides a Go library that emulates the features of the BSD `tail`
 program. The library comes with full support for truncation/move detection as
 it is designed to work with log rotation tools. The library works on all
 operating systems supported by Go, including POSIX systems like Linux, *BSD,
-MacOS, and MS Windows. Go 1.12 is the oldest compiler release supported.
+MacOS, and MS Windows. Go 1.18 is the oldest compiler release supported.
 
 A simple example:
 
 ```Go
-// Create a tail
-t, err := tail.TailFile(
- "/var/log/nginx.log", tail.Config{Follow: true, ReOpen: true})
+t, err := tail.TailFile("/var/log/nginx.log", tail.Config{
+    Follow: true,
+    ReOpen: true,
+})
 if err != nil {
-    panic(err)
+    log.Fatal(err)
 }
 
-// Print the text of each received line
 for line := range t.Lines {
+    if line.Err != nil {
+        log.Fatal(line.Err)
+    }
     fmt.Println(line.Text)
 }
 ```
@@ -30,7 +33,9 @@ See [API documentation](https://pkg.go.dev/github.com/nxadm/tail#section-documen
 
 ## Installing
 
-    go get github.com/nxadm/tail/...
+```bash
+    go get github.com/nxadm/tail
+```
 
 ## History
 
